@@ -2,15 +2,45 @@ import logo from './logo.svg';
 import './App.css';
 import * as React from 'react'
 
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  {serialize= JSON.stringify, deserialize = JSON.parse} = {}
+){
+  const [state, setState] = React.useState(() =>{
+    const valueInLocalStorage = window.localStorage.getItem(key);
+    if(valueInLocalStorage){
+      return deserialize(valueInLocalStorage);
+    } else {
+      return typeof defaultValue === 'function' ? defaultValue() : defaultValue
+    }
+  })
+
+  const prevKeyRef = React.useRef(key);
+  React.useEffect(() => {
+    const prevKey = prevKeyRef.current;
+    if(prevKey !== key){
+      window.localStorage.removeItem(prevKey);
+    }
+    prevKeyRef.current = key;
+    window.localStorage.setItem(key, serialize(state))
+  }, [key, state, serialize])
+
+  return [state, setState]
+}
+
 function App() {
-  const [squares, setSquare] =  React.useState(Array(9).fill(null));
+  const [squares, setSquare] =  useLocalStorageState('squares', Array(9).fill(null),);
+
+  React.useEffect(()=>{
+    window.localStorage.setItem('squares', JSON.stringify(squares))
+  },[squares])
 
   const nextValue = getNextValue(squares);
   const winner = getWinner(squares);
   const status = getStatus(squares, winner, nextValue);
 
   function handleClick(square) {
-    console.log("here");
     if(winner || squares[square]){
       return
     }
